@@ -25,6 +25,8 @@ class GlobalAccountCache:
 
     async def get(self, program: Pubkey) -> GlobalAccount | None:
         val = await self.redis.get(f"{self.prefix}:{program}")
+        print(f"GlobalAccount val {self.prefix}:{program}")
+        print(f"GlobalAccount val2:{val}")
         if val is None:
             val = await self._get(program)
             if val is None:
@@ -33,5 +35,7 @@ class GlobalAccountCache:
             await self.redis.set(f"{self.prefix}:{program}", json.dumps(data))
             return GlobalAccount.from_buffer(val)
         json_data = json.loads(val)
+        print(f"json_data val2:{json_data}")
         global_account_bytes = base64.b64decode(json_data["global"])
+        print(f"global_account_bytes val2:{global_account_bytes}")
         return GlobalAccount.from_buffer(global_account_bytes)

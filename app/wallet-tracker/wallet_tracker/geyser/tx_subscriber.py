@@ -261,6 +261,7 @@ class TransactionDetailSubscriber:
                             await self.response_queue.put(response)
                     except AioRpcError as e:
                         logger.error(f"Rpc Error: {e._details}")
+                        logger.error(f"Rpc Error: {e}")
                         await self._reconnect_and_subscribe()
                     except Exception as e:
                         logger.exception(e)

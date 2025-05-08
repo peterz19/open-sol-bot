@@ -30,15 +30,15 @@ class Swapper:
         self.sender = sender
 
     async def swap(
-        self,
-        keypair: Keypair,
-        token_address: str,
-        ui_amount: float,
-        swap_direction: SwapDirection,
-        slippage_bps: int,
-        in_type: SwapInType | None = None,
-        use_jito: bool = False,
-        priority_fee: float | None = None,
+            self,
+            keypair: Keypair,
+            token_address: str,
+            ui_amount: float,
+            swap_direction: SwapDirection,
+            slippage_bps: int,
+            in_type: SwapInType | None = None,
+            use_jito: bool = False,
+            priority_fee: float | None = None,
     ) -> Signature | None:
         """执行代币交换操作
 
@@ -66,12 +66,59 @@ class Swapper:
             priority_fee=priority_fee,
         )
         logger.debug(f"Built swap transaction: {transaction}")
-        # signature = await self.sender.send_transaction(transaction)
-        # logger.info(f"Transaction sent successfully: {signature}")
-        signature = await send_and_confirm_with_notify(transaction)
+        signature = await self.sender.send_transaction(transaction)
+        logger.info(f"Transaction sent successfully: {signature}")
+        # signature = await self.send_and_confirm_with_notify(self,transaction)
         logger.info(f"Transaction finished")
         return signature
 
+    async def wait_for_confirmation(client: AsyncClient, signature: str, timeout=30, interval=2):
+        """轮询确认交易是否上链"""
+        for _ in range(int(timeout / interval)):
+            resp = await client.get_signature_statuses([signature])
+            status = resp.value and resp.value[0]
+            if status and status.confirmation_status in ("confirmed", "finalized"):
+                return True
+            if status and status.err is not None:
+                raise Exception(f"交易失败: {status.err}")
+            await asyncio.sleep(interval)
+        raise TimeoutError("交易确认超时")
+
+
+    async def send_with_retry(self, transaction, opts=None, max_retries=3):
+        for attempt in range(max_retries):
+            try:
+                resp = await self.client.send_transaction(transaction, opts=opts)
+                return resp.value
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    raise
+                await asyncio.sleep(2 ** attempt)  # 指数退避
+
+
+    async def safe_send_message(text, bot=None, chat_id=None, max_retries=3):
+        if bot is None or chat_id is None:
+            logger.info(f"消息未发送（无bot或chat_id）：{text}")
+            return
+        for attempt in range(max_retries):
+            try:
+                await bot.send_message(parse_mode="HTML")
+                return
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    logger.error(f"通知用户失败: {e}，内容：{text}")
+                else:
+                    await asyncio.sleep(2 ** attempt)
+
+
+    async def send_and_confirm_with_notify(self, transaction):
+        try:
+            signature = await self.send_with_retry(transaction)
+            await self.wait_for_confirmation(self.client, signature)
+            await self.safe_send_message(f"✅ 交易成功: {signature}")
+            return signature
+        except Exception as e:
+            await self.safe_send_message(f"❌ 交易失败: {str(e)}")
 
 class AggregateTransactionBuilder(TransactionBuilder):
     """聚合多个交易构建器,返回最快成功的结果"""
@@ -87,16 +134,16 @@ class AggregateTransactionBuilder(TransactionBuilder):
         self.builders = builders
 
     async def _try_build_with_builder(
-        self,
-        builder: TransactionBuilder,
-        keypair: Keypair,
-        token_address: str,
-        ui_amount: float,
-        swap_direction: SwapDirection,
-        slippage_bps: int,
-        in_type: SwapInType | None = None,
-        use_jito: bool = False,
-        priority_fee: float | None = None,
+            self,
+            builder: TransactionBuilder,
+            keypair: Keypair,
+            token_address: str,
+            ui_amount: float,
+            swap_direction: SwapDirection,
+            slippage_bps: int,
+            in_type: SwapInType | None = None,
+            use_jito: bool = False,
+            priority_fee: float | None = None,
     ) -> tuple[TransactionBuilder, VersionedTransaction]:
         """尝试使用指定构建器构建交易
 
@@ -120,15 +167,15 @@ class AggregateTransactionBuilder(TransactionBuilder):
             raise
 
     async def build_swap_transaction(
-        self,
-        keypair: Keypair,
-        token_address: str,
-        ui_amount: float,
-        swap_direction: SwapDirection,
-        slippage_bps: int,
-        in_type: SwapInType | None = None,
-        use_jito: bool = False,
-        priority_fee: float | None = None,
+            self,
+            keypair: Keypair,
+            token_address: str,
+            ui_amount: float,
+            swap_direction: SwapDirection,
+            slippage_bps: int,
+            in_type: SwapInType | None = None,
+            use_jito: bool = False,
+            priority_fee: float | None = None,
     ) -> VersionedTransaction:
         """并行尝试所有构建器,返回最快成功的交易
 
@@ -209,7 +256,7 @@ class TradingService:
             raise ValueError(f"Unsupported trading route: {route}")
 
     def select_sender(
-        self, builder: TransactionBuilder, use_jito: bool = False
+            self, builder: TransactionBuilder, use_jito: bool = False
     ) -> TransactionSender:
         if isinstance(builder, GMGNTransactionBuilder):
             sender = self._gmgn_sender
@@ -224,47 +271,4 @@ class TradingService:
         sender = self.select_sender(builder, use_jito)
         return Swapper(builder, sender)
 
-async def wait_for_confirmation(client: AsyncClient, signature: str, timeout=30, interval=2):
-    """轮询确认交易是否上链"""
-    for _ in range(int(timeout / interval)):
-        resp = await client.get_signature_statuses([signature])
-        status = resp.value and resp.value[0]
-        if status and status.confirmation_status in ("confirmed", "finalized"):
-            return True
-        if status and status.err is not None:
-            raise Exception(f"交易失败: {status.err}")
-        await asyncio.sleep(interval)
-    raise TimeoutError("交易确认超时")
 
-async def send_with_retry(self, transaction, opts=None, max_retries=3):
-    for attempt in range(max_retries):
-        try:
-            resp = await self.client.send_transaction(transaction, opts=opts)
-            return resp.value
-        except Exception as e:
-            if attempt == max_retries - 1:
-                raise
-            await asyncio.sleep(2 ** attempt)  # 指数退避
-
-async def safe_send_message(text,bot=None, chat_id=None, max_retries=3):
-    if bot is None or chat_id is None:
-        logger.info(f"消息未发送（无bot或chat_id）：{text}")
-        return
-    for attempt in range(max_retries):
-        try:
-            await bot.send_message( parse_mode="HTML")
-            return
-        except Exception as e:
-            if attempt == max_retries - 1:
-                logger.error(f"通知用户失败: {e}，内容：{text}")
-            else:
-                await asyncio.sleep(2 ** attempt)
-
-async def send_and_confirm_with_notify(self, transaction):
-    try:
-        signature = await send_with_retry(transaction)
-        await wait_for_confirmation(self.client, signature)
-        await safe_send_message(f"✅ 交易成功: {signature}")
-        return signature
-    except Exception as e:
-        await safe_send_message(f"❌ 交易失败: {str(e)}")

@@ -31,9 +31,9 @@ class CopyTradeProcessor:
     """跟单交易"""
 
     def __init__(self):
-        redis_client = RedisClient.get_instance()
+        self.redis_client = RedisClient.get_instance()
         self.tx_event_consumer = TxEventConsumer(
-            redis_client,
+            self.redis_client,
             "trading:tx_event",
             "trading:new_swap_event",
         )
@@ -41,8 +41,9 @@ class CopyTradeProcessor:
         self.copytrade_service = CopyTradeService()
         self.setting_service = SettingService()
         self.holding_service = HoldingService()
-        self.swap_event_producer = SwapEventProducer(redis_client)
-        self.notify_copytrade_producer = NotifyCopyTradeProducer(redis_client)
+        self.swap_event_producer = SwapEventProducer(self.redis_client)
+        self.notify_copytrade_producer = NotifyCopyTradeProducer(self.redis_client)
+        self.copied_wallets_key = "copied_wallets"
 
     async def _process_tx_event(self, tx_event: TxEvent):
         """处理交易事件"""
@@ -54,6 +55,25 @@ class CopyTradeProcessor:
         if swap_mode == "ExactIn":
             input_mint = WSOL.__str__()
             output_mint = tx_event.mint
+             # 检查钱包是否已经跟单
+             
+            # 构造集合成员（格式: "wallet_address,mint_address"）
+            member = f"{tx_event.who},{output_mint}"
+            
+            try:
+                # 检查成员是否存在
+                is_member = await self.redis_client.sismember(self.copied_wallets_key, member)
+                
+                if is_member:
+                    logger.info(f"Wallet already copied: {member}")
+                    return
+                logger.info(f"Wallet not copied yet: {member}")
+            except Exception as e:
+                logger.error(f"Error checking Redis membership: {e}")
+                return
+            # if await self.redis_client.sismember(self.copied_wallets_key, tx_event.who+","+output_mint):
+            #     logger.info(f"Wallet {tx_event.who} has already been copied,{output_mint} output_mint skipping...")
+            # return
             # buy_pct = round(
             #     (tx_event.post_token_amount - tx_event.pre_token_amount)
             #     / tx_event.post_token_amount,
@@ -183,6 +203,12 @@ class CopyTradeProcessor:
             await self.swap_event_producer.produce(swap_event=swap_event)
             await self.notify_copytrade_producer.produce(data=swap_event)
             logger.info(f"New Copy Trade: {swap_event}")
+
+            if swap_mode == "ExactIn":
+                # 更新状态，标记钱包已跟单
+                member = f"{tx_event.who},{output_mint}"
+                await self.redis_client.sadd(self.copied_wallets_key, member)
+                logger.info(f"Wallet {tx_event.who} marked as copied output_mint={output_mint}")
         except Exception as e:
             logger.exception(f"Failed to process copytrade: {e}")
             # TODO: 通知到用户，跟单交易失败

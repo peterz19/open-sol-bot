@@ -40,6 +40,12 @@ class GlobalAccount:
         32s: 32 bytes for Pubkey
         """
         try:
+            # 如果缓冲区长度大于113字节，只使用前113字节
+            if len(buffer) > 113:
+                buffer = buffer[:113]
+            elif len(buffer) < 113:
+                raise ValueError(f"Buffer too short: expected 113 bytes, got {len(buffer)} bytes")
+
             # 解包数据
             (
                 discriminator,

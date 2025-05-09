@@ -22,6 +22,7 @@ class SwapRecord(Base, table=True):
     input_mint: str = Field(nullable=False)
     output_mint: str = Field(nullable=False)
     input_amount: int = Field(nullable=False, sa_type=BIGINT, description="输入金额")
+    ui_amount: int = Field(nullable=False, sa_type=BIGINT, description="交易的显示金额")
     input_token_decimals: int = Field(nullable=False, description="输入代币精度")
     output_amount: int = Field(nullable=False, sa_type=BIGINT, description="输出金额")
     output_token_decimals: int = Field(nullable=False, description="输出代币精度")

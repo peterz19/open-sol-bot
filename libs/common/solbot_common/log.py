@@ -20,10 +20,36 @@ logger.add(
     level=LOG_LEVEL,
     enqueue=True,
 )
+# Determine service name from the running module
+service_name = "common"
+for path in sys.path:
+    if "tg_bot" in path:
+        service_name = "tg-bot"
+        break
+    elif "trading" in path:
+        service_name = "trading"
+        break
+    elif "wallet_tracker" in path:
+        service_name = "wallet-tracker"
+        break
+    elif "cache_preloader" in path:
+        service_name = "cache-preloader"
+        break
+
+# Create service-specific log directory
+log_path = Path(__file__).parent.parent.parent / "logs" / service_name
+log_path.mkdir(parents=True, exist_ok=True)
 
 # Add file handler for errors
-log_path = Path(__file__).parent.parent.parent / "logs"
+# log_path = Path(__file__).parent.parent.parent / "logs"
 log_path.mkdir(exist_ok=True)
+logger.add(
+    log_path / "info.log",
+    format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | {name}:{function}:{line} - {message}",
+    rotation="1 day",
+    retention="7 days",
+    enqueue=True,
+)
 logger.add(
     log_path / "error.log",
     format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | {name}:{function}:{line} - {message}",

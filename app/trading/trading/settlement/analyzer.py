@@ -364,6 +364,12 @@ class TransactionAnalyzer:
         token_change = 0
         swap_sol_change = 0
         token_transfers = tx_detail["tokenTransfers"]
+
+        # 检查用户是转出代币（卖出）还是接收代币（买入）
+        is_sell = False
+        is_buy = False
+
+
         for token_transfer in token_transfers:
             # Buy
             if token_transfer["fromUserAccount"] == user_account and token_transfer["mint"] == str(

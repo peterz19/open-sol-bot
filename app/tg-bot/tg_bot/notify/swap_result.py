@@ -104,6 +104,10 @@ class SwapResultNotify:
             else:
                 sol_ui_amount = swap_record.input_ui_amount
                 token_ui_amount = swap_record.output_ui_amount
+                logger.info(f"_BUY_SUCCESS_TEMPLATE当前价格token_info {token_info}")
+                logger.info(f"_BUY_SUCCESS_TEMPLATE当前价格swap_record {swap_record}")
+                logger.info(f"_BUY_SUCCESS_TEMPLATE当前价格sol_ui_amount {sol_ui_amount}")
+                logger.info(f"_BUY_SUCCESS_TEMPLATE当前价格token_ui_amount {token_ui_amount}")
                 return _BUY_SUCCESS_TEMPLATE.render(
                     symbol=symbol,
                     sol_ui_amount=sol_ui_amount,
@@ -127,8 +131,12 @@ class SwapResultNotify:
                     symbol=symbol, name=name, signature=swap_record.signature
                 )
             else:
-                token_ui_amount = swap_record.input_ui_amount
+                token_ui_amount = event.ui_amount
                 sol_ui_amount = swap_record.output_ui_amount
+                logger.info(f"_SELL_SUCCESS_TEMPLATE当前价格token_info {token_info}")
+                logger.info(f"_SELL_SUCCESS_TEMPLATE当前价格swap_record {swap_record}")
+                logger.info(f"_SELL_SUCCESS_TEMPLATE当前价格sol_ui_amount {sol_ui_amount}")
+                logger.info(f"_SELL_SUCCESS_TEMPLATE当前价格token_ui_amount {token_ui_amount}")
                 return _SELL_SUCCESS_TEMPLATE.render(
                     symbol=symbol,
                     token_ui_amount=token_ui_amount,

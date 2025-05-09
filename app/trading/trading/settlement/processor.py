@@ -104,6 +104,7 @@ class SwapSettlementProcessor:
                 input_amount=swap_event.amount,
                 input_token_decimals=input_token_decimals,
                 output_amount=swap_event.amount,
+                ui_amount=swap_event.ui_amount,
                 output_token_decimals=output_token_decimals,
             )
         else:
@@ -120,6 +121,7 @@ class SwapSettlementProcessor:
                     input_token_decimals=input_token_decimals,
                     output_amount=swap_event.amount,
                     output_token_decimals=output_token_decimals,
+                    ui_amount=swap_event.ui_amount,
                 )
             else:
                 data = await self.analyzer.analyze_transaction(
@@ -132,7 +134,7 @@ class SwapSettlementProcessor:
                 if swap_event.swap_mode == "ExactIn":
                     output_amount = int(abs(data["token_change"]) * 10**6)
                 else:
-                    output_amount = int(abs(data["swap_sol_change"]) * 10**9)
+                    output_amount = int(abs(data["token_change"]) * 10 ** 6)
 
                 swap_record = SwapRecord(
                     signature=str(signature),
@@ -152,6 +154,7 @@ class SwapSettlementProcessor:
                     sol_change=int(data["sol_change"] * SOL_DECIMAL),
                     swap_sol_change=int(data["swap_sol_change"] * SOL_DECIMAL),
                     other_sol_change=int(data["other_sol_change"] * SOL_DECIMAL),
+                    ui_amount=swap_event.ui_amount,
                 )
 
         swap_record_clone = swap_record.model_copy()

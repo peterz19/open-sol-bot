@@ -202,6 +202,7 @@ class TgBotConfig(BaseModel):
     token: str
     mode: Literal["private", "public"]
     manager_id: int | None = None
+    proxy: str | None = None  # 代理服务器地址，例如：http://127.0.0.1:7890
 
 
 class CopyTradeConfig(BaseModel):

@@ -1,6 +1,6 @@
 import struct
 from dataclasses import dataclass
-
+from solbot_common.log import logger
 
 @dataclass
 class BondingCurveAccount:
@@ -79,11 +79,11 @@ class BondingCurveAccount:
         """
         从字节缓冲区解析账户数据
         格式: <Q Q Q Q Q Q ?
-        Q: unsigned long long (8 bytes)
+        ssQ: unsigned long long (8 bytes)
         ?: boolean (1 byte)
         """
-        if len(buffer) > 49:
-           buffer = buffer[:49]
+        logger.error(f"Buffer size length: {len(buffer)}")
+        logger.error(f"Buffer ===: {buffer}")
         try:
             (
                 discriminator,
@@ -106,3 +106,4 @@ class BondingCurveAccount:
             )
         except struct.error as e:
             raise ValueError(f"Failed to decode buffer: {e}")
+

@@ -82,6 +82,8 @@ class BondingCurveAccount:
         Q: unsigned long long (8 bytes)
         ?: boolean (1 byte)
         """
+        if len(buffer) > 49:
+           buffer = buffer[:49]
         try:
             (
                 discriminator,
